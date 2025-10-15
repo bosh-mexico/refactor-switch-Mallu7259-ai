@@ -1,27 +1,35 @@
-import pytest
-from io import StringIO
-from contextlib import redirect_stdout
-from checkout import checkout, PaymentMode
+import unittest
+from payment_service import checkout, PaymentMode, process_creditcard, process_googlepay, process_paypal
+from unittest.mock import patch
 
+class TestCheckOut(unittest.TestCase):
 
-@pytest.mark.parametrize("mode,expected_output", [
-    (PaymentMode.PAYPAL, "Processing PayPal payment of $150.75"),
-    (PaymentMode.GOOGLEPAY, "Processing GooglePay payment of $150.75"),
-    (PaymentMode.CREDITCARD, "Processing Credit Card payment of $150.75"),
-    (PaymentMode.UNKNOWN, "Invalid payment mode selected!"),
-])
-def test_checkout_modes(mode, expected_output):
-    # Capture console output
-    f = StringIO()
-    with redirect_stdout(f):
-        checkout(mode, 150.75)
-    output = f.getvalue().strip()
-    assert expected_output in output
+    @patch('payment_service.process_googlepay')
+    @patch('builtins.print')
+    def test_google_pay_handler(self, mock_print, mock_process_googlepay):
+        amt = 100
+        checkout(PaymentMode.GOOGLEPAY, amt)
+        mock_process_googlepay.assert_called_once_with(amt)
 
+    @patch('payment_service.process_creditcard')
+    @patch('builtins.print')
+    def test_credit_card_handler(self, mock_print, mock_process_credit):
+        amt = 150
+        checkout(PaymentMode.CREDITCARD, amt)
+        mock_process_credit.assert_called_once_with(amt)
 
-def test_checkout_invalid_amount():
-    f = StringIO()
-    with redirect_stdout(f):
-        checkout(PaymentMode.PAYPAL, -50)
-    output = f.getvalue().strip()
-    assert "Invalid payment amount" in output
+    @patch('payment_service.process_paypal')
+    @patch('builtins.print')
+    def test_paypal_handler(self, mock_print, mock_process_payal):
+        amt = 200
+        checkout(PaymentMode.PAYPAL, amt)
+        mock_process_payal.assert_called_once_with(amt)
+    
+    @patch('builtins.print')
+    def test_default_handler(self, mock_print):
+        amt=100
+        checkout(PaymentMode.UNKNOWN, amt)
+        mock_print.assert_called_once_with("Invalid payment mode selected!")
+
+if __name__ == "__main__":
+    unittest.main()
